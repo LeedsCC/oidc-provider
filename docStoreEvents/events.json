@@ -1,0 +1,32 @@
+{
+  "documents": {
+    "OIDC": {
+      "pathsToIndex": {
+        "Access/by_id/:id/email": {
+          "path": "Access/by_email/:value",
+          "value": "id"
+        },
+        "Claims/by_id/:id/name": {
+          "path": "Claims/by_name/:value",
+          "value": "id"
+        },
+        "Clients/by_id/:id/client_id": {
+          "path": "Clients/by_client_id/:value",
+          "value": "id"
+        },
+        "Users/by_id/:id/email": {
+          "path": "Users/by_email/:value",
+          "value": "id"
+        },
+        "Users/by_id/:id/hcp_id": {
+          "path": "Users/by_hcp/:value",
+          "value": "id"
+        },
+        "Users/by_id/:id/nhsNumber": {
+          "path": "Users/by_nhsNumber/:value",
+          "value": "id"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "qewd_up": true,
+  "qewd": {
+    "managementPassword": "oidc",
+    "serverName": "QEWD OpenId-Connect Provider"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "oidc_provider": {
+    "issuer": {
+      "host": "http://192.168.1.98",
+      "port": 8000
+    },
+    "path_prefix": "/openid",
+    "cookies": {
+      "long": {
+        "httpOnly": true,
+        "maxAge": 600000
+      }
+    },
+    "ui": {
+      "login_form_title": "OpenId-Connect Authentication Service Log In",
+      "home_page_url": "http://192.168.1.98:8080/"
+    }
+  },
+  "orchestrator": {
+    "host": "http://192.168.1.98",
+    "port": 8080
+  },
+  "documentName": "OIDC",
+  "use2FA": false,
+  "twilio": {
+    "accountSid": "xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "authToken": "yyyyyyyyyyyyyyyyyyyyyyyyyy",
+    "telNo": "+447449000000"
+  },
+  "email_server": {
+    "host": "smtp.eu.mailgun.org",
+    "port": 465,
+    "secure": true,
+    "auth": {
+      "user": "postmaster@mail.example.com",
+      "pass": "xxxxxxxxxxxxxxx"
+    }
+  },
+  "user_verify_email": {
+    "from": "Information Only\" <no_reply@example.com>",
+    "subject": "Please verify your email address"
+  }
+}
