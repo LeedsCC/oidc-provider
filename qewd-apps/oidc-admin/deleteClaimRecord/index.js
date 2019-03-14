@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -44,7 +44,7 @@ module.exports = function(messageObj, session, send, finished) {
 
   var name = claimDoc.$('name').value;
   claimDoc.delete();
-  claimsDoc.$(['by_name', name]).delete();
+  //claimsDoc.$(['by_name', name]).delete();
 
   return finished({
     ok: true

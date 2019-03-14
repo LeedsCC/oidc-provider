@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -66,7 +66,7 @@ module.exports = function(messageObj, session, send, finished) {
       name: name,
       fields: fieldArray
     });
-    claimsDoc.$(['by_name', name]).value = id;
+    //claimsDoc.$(['by_name', name]).value = id;
   }
   else {
     // updating existing record
@@ -80,8 +80,8 @@ module.exports = function(messageObj, session, send, finished) {
       if (claimsDoc.$(['by_name', name]).exists) {
         return finished({error: 'Claim name ' + name + ' already exists'});
       }
-      claimsDoc.$(['by_name', name]).value = id;
-      claimsDoc.$(['by_name', old_name]).delete();
+      //claimsDoc.$(['by_name', name]).value = id;
+      //claimsDoc.$(['by_name', old_name]).delete();
     }
 
     claimDoc.delete(); // ensures field array is cleared down first

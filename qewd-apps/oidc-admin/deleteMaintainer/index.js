@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -61,8 +61,8 @@ module.exports = function(messageObj, session, send, finished) {
     this.db.use(this.oidc.documentName, 'verify_pending', verifyToken).delete();
   }
   userDoc.delete();
-  usersDoc.$(['by_email', email]).delete();
-  usersDoc.$(['by_username', username]).delete();
+  //usersDoc.$(['by_email', email]).delete();
+  //usersDoc.$(['by_username', username]).delete();
 
   return finished({
     ok: true

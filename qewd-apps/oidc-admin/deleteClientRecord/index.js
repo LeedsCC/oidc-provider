@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -44,7 +44,7 @@ module.exports = function(messageObj, session, send, finished) {
 
   var client_id = clientDoc.$('client_id').value;
   clientDoc.delete();
-  clientsDoc.$(['by_client_id', client_id]).delete();
+  //clientsDoc.$(['by_client_id', client_id]).delete();
 
   return finished({
     ok: true

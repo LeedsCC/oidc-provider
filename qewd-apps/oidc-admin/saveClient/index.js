@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -71,7 +71,7 @@ module.exports = function(messageObj, session, send, finished) {
       redirect_uri_path: redirect_uri_path,
       post_logout_uri_path: post_logout_uri_path
     });
-    clientsDoc.$(['by_client_id', client_id]).value = id;
+    //clientsDoc.$(['by_client_id', client_id]).value = id;
   }
   else {
     // updating existing record
@@ -85,8 +85,8 @@ module.exports = function(messageObj, session, send, finished) {
       if (clientsDoc.$(['by_client_id', client_id]).exists) {
         return finished({error: 'Client_id ' + client_id + ' already exists'});
       }
-      clientsDoc.$(['by_client_id', client_id]).value = id;
-      clientsDoc.$(['by_client_id', old_client_id]).delete();
+      //clientsDoc.$(['by_client_id', client_id]).value = id;
+      //clientsDoc.$(['by_client_id', old_client_id]).delete();
     }
 
     clientDoc. setDocument({

@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -53,20 +53,25 @@ module.exports = function(messageObj, session, send, finished) {
   var userId = session.data.$('userId').value;
 
   var user = userDoc.getDocument(true);
-  console.log('from Users: user id = ' + id + '; ' + JSON.stringify(user, null, 2));
-  console.log('userId = ' + userId + '; hcp_id = ' + user.hcp_id);
+  //console.log('from Users: user id = ' + id + '; ' + JSON.stringify(user, null, 2));
+  //console.log('userId = ' + userId + '; hcp_id = ' + user.hcp_id);
 
   if (userType !== 'admin' && userId.toString() !== user.hcp_id.toString()) {
     return finished({error: 'Invalid request 2'});
   }
 
   userDoc.delete();
+  /*
+
+   Now handled automatically
+
   usersDoc.$(['by_email', user.email]).delete();
   if (user.username) {
     usersDoc.$(['by_username', user.username]).delete();
   }
   usersDoc.$(['by_nhsNumber', user.nhsNumber]).delete();
   usersDoc.$(['by_hcp', user.hcp_id, id]).delete();
+  */
 
   return finished({
     ok: true

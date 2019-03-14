@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -156,7 +156,7 @@ module.exports = function(messageObj, session, send, finished) {
     return finished({error: 'Invalid request'});
   } 
 
-  var usersDoc = this.db.use('OpenId', 'Users');
+  var usersDoc = this.db.use(this.oidc.documentName, 'Users');
   var now = new Date().toISOString();
   var verified;
   var password = '';
@@ -194,9 +194,9 @@ module.exports = function(messageObj, session, send, finished) {
       updatedBy: hcp_id,
       updatedAt: now
     });
-    usersDoc.$(['by_email', email]).value = id;
-    usersDoc.$(['by_nhsNumber', nhsNumber]).value = id;
-    usersDoc.$(['by_hcp', hcp_id, id]).value = id;
+    //usersDoc.$(['by_email', email]).value = id;
+    //usersDoc.$(['by_nhsNumber', nhsNumber]).value = id;
+    //usersDoc.$(['by_hcp', hcp_id, id]).value = id;
   }
   else {
     // updating existing record
@@ -219,8 +219,8 @@ module.exports = function(messageObj, session, send, finished) {
       if (usersDoc.$(['by_email', email]).exists) {
         return finished({error: 'Email address ' + email + ' is already in use'});
       }
-      usersDoc.$(['by_email', email]).value = id;
-      usersDoc.$(['by_email', old_email]).delete();
+      //usersDoc.$(['by_email', email]).value = id;
+      //usersDoc.$(['by_email', old_email]).delete();
     }
 
     var old_nhsNumber = user.nhsNumber.toString();
@@ -228,8 +228,8 @@ module.exports = function(messageObj, session, send, finished) {
       if (usersDoc.$(['by_nhsNumber', nhsNumber]).exists) {
         return finished({error: 'NHS Number ' + nhsNumber + ' is already in use'});
       }
-      usersDoc.$(['by_nhsNumber', nhsNumber]).value = id;
-      usersDoc.$(['by_nhsNumber', old_nhsNumber]).delete();
+      //usersDoc.$(['by_nhsNumber', nhsNumber]).value = id;
+      //usersDoc.$(['by_nhsNumber', old_nhsNumber]).delete();
     }
 
     userDoc.setDocument({

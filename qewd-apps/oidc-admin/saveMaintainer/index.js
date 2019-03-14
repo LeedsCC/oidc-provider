@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -122,7 +122,7 @@ module.exports = function(messageObj, session, send, finished) {
       modifiedBy: hcp_id,
       updatedAt: now
     });
-    usersDoc.$(['by_email', email]).value = id;
+    //usersDoc.$(['by_email', email]).value = id;
   }
   else {
     // updating existing record
@@ -141,8 +141,8 @@ module.exports = function(messageObj, session, send, finished) {
       if (usersDoc.$(['by_email', email]).value !== id) {
         return finished({error: 'Email address ' + email + ' is already in use'});
       }
-      usersDoc.$(['by_email', email]).value = id;
-      usersDoc.$(['by_email', old_email]).delete();
+      //usersDoc.$(['by_email', email]).value = id;
+      //usersDoc.$(['by_email', old_email]).delete();
     }
 
     userDoc.setDocument({

@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  14 March 2019
 
 */
 
@@ -130,7 +130,7 @@ module.exports = function(messageObj, session, send, finished) {
 
   // save to database
   usersDoc.$(['by_id', id]).setDocument(user);
-  emailIndex.value = id;
+  //emailIndex.value = id;
 
   // all done - return the registered user object, but leave off the password
 
