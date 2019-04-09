@@ -24,14 +24,17 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  14 March 2019
+  9 April 2019
 
 */
 
 module.exports = function(messageObj, session, send, finished) {
 
   var orchestrator = this.oidc.orchestrator;
-  var orchestrator.Host = orchestrator.host + ':' + orchestrator.port;
+  var orchestratorHost = orchestrator.host;
+  if (orchestrator.port) {
+    orchestratorHost = orchestratorHost + ':' + orchestrator.port;
+  }
 
   var clientsDoc = this.db.use(this.oidc.documentName, 'Clients');
   var clients = [];

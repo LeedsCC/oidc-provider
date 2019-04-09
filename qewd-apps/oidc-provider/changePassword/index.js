@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  18 March 2019
 
 */
 
@@ -77,21 +77,32 @@ module.exports = function(messageObj, session, send, finished) {
      });
   */
 
-  var twoFaDoc = session.data.$(['2fa', grant]);
+  var use2FA = (this.oidc.use2FA !== false);
+  var twoFaDoc;
+  var twoFa;
+  var now;
+  var id;
 
-  if (!twoFaDoc.exists) {
-    return finished({error: 'Invalid request'});
+  if (use2FA) {
+
+    twoFaDoc = session.data.$(['2fa', grant]);
+    if (!twoFaDoc.exists) {
+      return finished({error: 'Invalid request'});
+    }
+
+    twoFa = twoFaDoc.getDocument();
+    now = Date.now();
+
+    if (twoFa.expiry < now) {
+      return finished({
+        error: 'Sorry, you took too long to change your password',
+        expired: true
+      });
+    }
+    id = twoFa.id;
   }
-
-  var twoFa = twoFaDoc.getDocument();
-
-  var now = Date.now();
-
-  if (twoFa.expiry < now) {
-    return finished({
-      error: 'Sorry, you took too long to change your password',
-      expired: true
-    });
+  else {
+    id = session.data.$(['resetPassword', grant]).value
   }
 
   var salt = bcrypt.genSaltSync(10);
@@ -99,25 +110,32 @@ module.exports = function(messageObj, session, send, finished) {
 
   // Update the user's password details and flag as verified password
 
-  var userDoc = this.db.use(this.oidc.documentName, 'Users', 'by_id', twoFa.id);
+  var userDoc = this.db.use(this.oidc.documentName, 'Users', 'by_id', id);
   userDoc.$('password').value = hash;
   userDoc.$('updatedAt').value = new Date().toISOString();
   userDoc.$('verified').value = true;
-  userDoc.$('modifiedBy').value = twoFa.id;
+  userDoc.$('modifiedBy').value = id;
 
   // ok, we're finished with the 2FA session code data for this user
 
-  twoFaDoc.delete();
-
   // get rid of any expired 2fa codes while we're here
-  
-  session.data.$('2fa').forEachChild(function(grant, node) {
-    if (node.$('expiry').value < now) node.delete();
-  });
 
-  finished({
-    ok: true,
-    accountId: twoFa.accountId
-  });
+  if (use2FA) {
+    twoFaDoc.delete();
+    session.data.$('2fa').forEachChild(function(grant, node) {
+      if (node.$('expiry').value < now) node.delete();
+    });
+
+    finished({
+      ok: true,
+      accountId: twoFa.accountId
+    });
+  }
+  else {
+    finished({
+      ok: true,
+      accountId: userDoc.$('email').value
+    });
+  }
 
 };

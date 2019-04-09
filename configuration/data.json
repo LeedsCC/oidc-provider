@@ -25,7 +25,7 @@
     {
       "client_id": "test",
       "client_secret": "dcae4e98-61e7-43f5-bcac-fe196cc5d627",
-      "post_logout_uri_path": "",
+      "post_logout_uri_path": "/demo",
       "redirect_uri_path": "/auth/token"
     }
   ],

@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  14 March 2019
+  9 April 2019
 
 */
 
@@ -64,7 +64,10 @@ module.exports = function(messageObj, session, send, finished) {
   oidcDoc.$('grants').delete(); // clear down any previously logged grants
 
   var orchestrator = this.oidc.orchestrator;
-  var orchestratorHost = orchestrator.host + ':' + orchestrator.port;
+  var orchestratorHost = orchestrator.host;
+  if (typeof orchestrator.port !== 'undefined' && orchestrator.port !== '') {
+    orchestratorHost = orchestratorHost + ':' + orchestrator.port;
+  }
 
   var params = {
     issuer: this.oidc.oidc_provider.issuer,

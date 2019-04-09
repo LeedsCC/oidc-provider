@@ -24,13 +24,13 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  12 March 2019
+  14 March 2019
 
 */
 
 var load = require('./loader');
 var keepAlive = require('./keepAlive');
-var loadInitialData = require('./loadInitialData');
+//var loadInitialData = require('./loadInitialData');
 var qewd_interface = require('./qewd_interface');
 var oidc_config = require('/opt/qewd/mapped/configuration/oidc.json');
 
@@ -50,34 +50,43 @@ function start(app, bodyParser) {
     type: 'ewd-register',
     application: 'oidc-provider'
   })
-    .then (function(result) {
-      _this.oidc.token = result.message.token;
+  .then (function(result) {
+    _this.oidc.token = result.message.token;
 
-      _this.send_promise({
-        type: 'login',
-        params: {
-          password: _this.userDefined.config.managementPassword
-        }
-      })
-        .then (function(result) {
+    _this.send_promise({
+      type: 'login',
+      params: {
+        password: _this.userDefined.config.managementPassword
+      }
+    }
+  )
+  .then (function(result) {
   
-          // fetch or generate the keystore & config params
+    // configure the OIDC Provider using the /configuration/data.json file
+    //  unless already populated
 
-          var msg = {type: 'getParams'};
-          _this.send_promise(msg)
-            .then (function(result) {
+    var msg = {type: 'configure'};
+    _this.send_promise(msg)
 
-              // start up the OIDC Provider
+  .then (function(result) {
 
-              load.call(_this, app, bodyParser, result.message);
+    // fetch or generate the keystore & config params
 
-              // start timed keepalive messages to maintain session
-              
-              loadInitialData.call(_this);
-              keepAlive.call(_this);
-          });
-      });
+    var msg = {type: 'getParams'};
+    _this.send_promise(msg)
+
+  .then (function(result) {
+
+    // start up the OIDC Provider
+    load.call(_this, app, bodyParser, result.message);
+
+    // start timed keepalive messages to maintain session
+            
+    keepAlive.call(_this);
   });
-};
+  });
+  });
+  });
+}
 
 module.exports = start;

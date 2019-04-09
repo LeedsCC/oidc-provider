@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  18 March 2019
 
 */
 
@@ -49,32 +49,25 @@ var transporter;
 
 module.exports = function(messageObj, session, send, finished) {
 
-  var nodemailer_params = this.oidc.email_server;
-  if (!transporter) {
-    transporter = nodemailer.createTransport(nodemailer_params);
-  }
-  var oidc_server = this.oidc.oidc_provider.issuer.host;
-  var port = this.oidc.oidc_provider.issuer.port;
-  if (!oidc_server.startsWith('https://')) {
-    if (port && port !== 80) {
-      oidc_server = oidc_server + ':' + port;
-    }
-  }
-  var email_options = this.oidc.user_verify_email;
-
   var email = messageObj.params.email;
 
   var usersDoc = this.db.use(this.oidc.documentName, 'Users');
   var emailIndex = usersDoc.$(['by_email', email]);
 
   if (!emailIndex.exists) {
+    if (this.oidc.useEmail === false) {
+      return finished({
+        ok: false,
+        temporary_password: ''
+      });
+    }
     return finished({error: 'Unrecognised email address'});
   }
 
   var id = emailIndex.value;
   var userDoc = usersDoc.$(['by_id', id]);
   if (!userDoc.exists) {
-    return finished({error: 'A problem occurred when accessing your account.  Please contact your Helm Administrator'});
+    return finished({error: 'A problem occurred when accessing your account.  Please contact your Administrator'});
   }
 
   var password = randomstring.generate({
@@ -88,7 +81,27 @@ module.exports = function(messageObj, session, send, finished) {
   userDoc.$('password').value = hash;
   userDoc.$('updatedAt').value = new Date().toISOString();
   userDoc.$('modifiedBy').value = id;
-  
+
+  if (this.oidc.useEmail === false) {
+    return finished({
+      ok: true,
+      temporary_password: password
+    });
+  }
+
+  var nodemailer_params = this.oidc.email_server;
+  if (!transporter) {
+    transporter = nodemailer.createTransport(nodemailer_params);
+  }
+  var oidc_server = this.oidc.oidc_provider.issuer.host;
+  var port = this.oidc.oidc_provider.issuer.port;
+  if (!oidc_server.startsWith('https://')) {
+    if (port && port !== 80) {
+      oidc_server = oidc_server + ':' + port;
+    }
+  }
+  var email_options = this.oidc.user_verify_email;
+
   var text = getTextFromFile(__dirname + '/requestNewPasswordEmail.txt');
 
   var subst = {

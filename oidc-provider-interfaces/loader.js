@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  12 March 2019
+  9 April 2019
 
 */
 
@@ -38,19 +38,26 @@ var path = require('path');
 
 module.exports = function(app, bodyParser, params) {
 
+  var configuration_options;
+  try {
+    configuration_options = require('../configuration/configuration_options');
+  }
+  catch(err) {
+  }
+
   console.log('OpenId Connect Server Loader starting with params:');
   console.log(JSON.stringify(params, null, 2));
 
   var qewd_adapter = adapter(this);
   var Account = account(this);
   var _this = this;
+  var oidc_provider = this.oidc.oidc_provider;
 
-  const configuration = {
+  var configuration = {
     claims: params.Claims,
     findById: Account.findById,
 
     interactionUrl(ctx) {
-      //return params.path_prefix + `/interaction/${ctx.oidc.uuid}`;
       return `/openid/interaction/${ctx.oidc.uuid}`;
     },
 
@@ -64,27 +71,28 @@ module.exports = function(app, bodyParser, params) {
     }
   };
 
-  if (params.cookies) {
-    configuration.cookies = params.cookies;
+  // for function-based configuration options:
+
+  if (configuration_options) {
+    for (var name in configuration_options) {
+      configuration[name] = configuration_options[name];
+    }
   }
+
+  // for fixed-value configuration options
+
+  if (oidc_provider.configuration_options) {
+    for (var name in oidc_provider.configuration_options) {
+      configuration[name] = oidc_provider.configuration_options[name];
+    }
+  }
+
   if (!configuration.cookies) configuration.cookies = {};
   if (!configuration.cookies.keys) {
     configuration.cookies.keys = ['mySecret1', 'mySecret2', 'mySecret3'];
   }
   if (!configuration.cookies.thirdPartyCheckUrl) {
     configuration.cookies.thirdPartyCheckUrl = 'https://cdn.rawgit.com/panva/3rdpartycookiecheck/92fead3f/start.html';
-  }
-
-  if (params.postLogoutRedirectUri) {
-
-    console.log('loading postLogoutRedirectUri: ' + params.postLogoutRedirectUri)
-
-    async function postLogoutRedirectUri(ctx) {
-      console.log('postLogoutRedirectUri function returning ' + params.postLogoutRedirectUri);
-      return params.postLogoutRedirectUri;
-    }
-
-    configuration.postLogoutRedirectUri = postLogoutRedirectUri;
   }
 
   var issuer = params.issuer.host;
@@ -125,8 +133,13 @@ module.exports = function(app, bodyParser, params) {
             token: _this.oidc.token
           });
         }
-        details.loginFormTitle = _this.oidc.oidc_provider.ui.login_form_title;
-        details.homePage = _this.oidc.oidc_provider.ui.home_page_url;
+        details.loginFormTitle = oidc_provider.ui.login_form_title;
+        details.homePage = oidc_provider.ui.home_page_url;
+        var timeout = 600;
+        if (oidc_provider.configuration_options && oidc_provider.configuration_options.cookies) {
+          timeout = oidc_provider.configuration_options.cookies.long.maxAge;
+        }
+        details.cookieTimeout = timeout;
 
         res.render('login', { details });
       }
@@ -162,9 +175,15 @@ module.exports = function(app, bodyParser, params) {
               error: account.error
             },
             uuid: req.params.grant,
-            loginFormTitle: _this.oidc.oidc_provider.ui.login_form_title,
-            homePage: _this.oidc.oidc_provider.ui.home_page_url
+            loginFormTitle: oidc_provider.ui.login_form_title,
+            homePage: oidc_provider.ui.home_page_url
           };
+
+          var timeout = 600;
+          if (oidc_provider.configuration_options && oidc_provider.configuration_options.cookies) {
+            timeout = oidc_provider.configuration_options.cookies.long.maxAge;
+          }
+          details.cookieTimeout = timeout;
 
           if (account.error === 'Maximum Number of Attempts Exceeded') {
             res.render('maxAttempts');
@@ -178,6 +197,16 @@ module.exports = function(app, bodyParser, params) {
         if (account.accountId) {
 
           // gets here if 2FA not enabled
+
+          if (account.resetPassword) {
+            var details = {
+              params: {},
+              uuid: req.params.grant,
+              homePage: oidc_provider.ui.home_page_url
+            }
+            res.render('resetPassword', {details});
+            return;
+          }
 
           oidc.interactionFinished(req, res, {
             login: {
@@ -195,7 +224,8 @@ module.exports = function(app, bodyParser, params) {
 
         var details = {
           params: {},
-          uuid: req.params.grant
+          uuid: req.params.grant,
+          homePage: oidc_provider.ui.home_page_url
         }
         res.render('confirmCode', {details});
       }).catch(next);
@@ -208,7 +238,8 @@ module.exports = function(app, bodyParser, params) {
             params: {
               error: results.error
             },
-            uuid: req.params.grant
+            uuid: req.params.grant,
+            homePage: oidc_provider.ui.home_page_url
           };
 
           if (results.error === 'Maximum Number of Attempts Exceeded') {
@@ -228,7 +259,8 @@ module.exports = function(app, bodyParser, params) {
         if (results.resetPassword) {
           var details = {
             params: {},
-            uuid: req.params.grant
+            uuid: req.params.grant,
+            homePage: oidc_provider.ui.home_page_url
           }
           res.render('resetPassword', {details});
         }
@@ -264,8 +296,13 @@ module.exports = function(app, bodyParser, params) {
             uuid: req.params.grant
           };
           if (results.expired) {
-            details.loginFormTitle = _this.oidc.oidc_provider.ui.login_form_title;
-            details.homePage = _this.oidc.oidc_provider.ui.home_page_url;
+            details.loginFormTitle = oidc_provider.ui.login_form_title;
+            details.homePage = oidc_provider.ui.home_page_url;
+            var timeout = 600;
+            if (oidc_provider.configuration_options && oidc_provider.configuration_options.cookies) {
+              timeout = oidc_provider.configuration_options.cookies.long.maxAge;
+            }
+            details.cookieTimeout = timeout;
             res.render('login', {details});
           }
           else {
@@ -293,38 +330,46 @@ module.exports = function(app, bodyParser, params) {
     app.get('/openid/interaction/:grant/forgotPassword', parse, (req, res, next) => {
       var details = {
         params: {},
-        uuid: req.params.grant
+        uuid: req.params.grant,
+        homePage: oidc_provider.ui.home_page_url
       };
       res.render('forgotPassword', {details});
     });
 
     app.post('/openid/interaction/:grant/requestNewPassword', parse, (req, res, next) => {
       Account.requestNewPassword(req.body.email).then((results) => {
-        var details;
-        /*
 
-        Don't give an error - if invalid email address, then user won't get an email
+        console.log('** requestNewPassword results: ' + JSON.stringify(results, null, 2));
 
-        if (results.error) {
-          details = {
-            params: {
-              error: results.error
-            },
-            uuid: req.params.grant
-          };
-          res.render('forgotPassword', {details});
-          return;
-        }
-        */
-        details = {
-          params: {
-            //error: 'Use the temporary password that has been emailed to you'
-            error: '<center>If an account exists with this email address<br /> a password reset email will be sent</center>'
-          },
+        var details = {
           uuid: req.params.grant,
-          loginFormTitle: _this.oidc.oidc_provider.ui.login_form_title,
-          homePage: _this.oidc.oidc_provider.ui.home_page_url
+          loginFormTitle: oidc_provider.ui.login_form_title,
+          homePage: oidc_provider.ui.home_page_url
         };
+
+          var timeout = 600;
+          if (oidc_provider.configuration_options && oidc_provider.configuration_options.cookies) {
+            timeout = oidc_provider.configuration_options.cookies.long.maxAge;
+          }
+          details.cookieTimeout = timeout;
+
+        if (typeof results.temporary_password !== 'undefined') {
+          if (!results.ok) {
+            details.params = {
+              error: '<center>That email address could not be found</center>'
+            };
+          }
+          else {
+            details.params = {
+              error: '<center>Your temporary password is ' + results.temporary_password + '</center>'
+            };
+          }
+        }
+        else {
+          details.params = {
+            error: '<center>If an account exists with this email address<br /> a password reset email will be sent</center>'
+          };
+        }
         res.render('login', {details});
       }).catch(next);
     });
@@ -333,7 +378,10 @@ module.exports = function(app, bodyParser, params) {
 
     app.use((err, req, res, next) => {
       console.log('**** Error occurred: ' + err);
-      res.render('error');
+      var details = {
+        homePage: oidc_provider.ui.home_page_url
+      };
+      res.render('error', {details});
     });
   });
 

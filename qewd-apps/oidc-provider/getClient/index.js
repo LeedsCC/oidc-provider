@@ -24,7 +24,7 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  14 March 2019
+  9 April 2019
 
 */
 
@@ -34,7 +34,10 @@
 function getAClient(clientsDoc, client_id) {
 
   var orchestrator = this.oidc.orchestrator;
-  var orchestratorHost = orchestrator.host + ':' + orchestrator.port;
+  var orchestratorHost = orchestrator.host;
+  if (orchestrator.port) {
+    orchestratorHost = orchestratorHost + ':' + orchestrator.port;
+  }
 
   var id = clientsDoc.$(['by_client_id', client_id]).value;
   var client = clientsDoc.$(['by_id', id]).getDocument(true);
@@ -45,6 +48,9 @@ function getAClient(clientsDoc, client_id) {
     redirect_uris: [orchestratorHost + client.redirect_uri_path],
     post_logout_redirect_uris: [orchestratorHost + post_logout_uri_path]
   };
+  if (client.grant_types) {
+    clientObj.grant_types = client.grant_types;
+  }
   return clientObj;
 }
 

@@ -21,7 +21,7 @@
       // reload the page before grant has a chance to expire
 
       function setTimerCookie() {
-        var expireTime = new Date(Date.now() + 590000);
+        var expireTime = new Date(Date.now() + <%= details.cookieTimeout %> - 20000);
         document.cookie = 'timer=live;expires=' + expireTime.toGMTString() + ';path=/';
       }
 

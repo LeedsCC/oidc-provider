@@ -115,11 +115,16 @@ module.exports = function(messageObj, session, send, finished) {
   sessionGrantDoc.delete();
 
   if (!use2FA) {
+    var resetPassword = false;
+    if (userDoc.$('verified').value === 'pending_first_login') {
+      resetPassword = true;
+      session.data.$(['resetPassword', grant]).value = id;
+    }
     return finished({
       ok: true,
       accountId: email,
-      resetPassword: false
-  });
+      resetPassword: resetPassword
+    });
   }
 
   console.log('sending 2FA code for ' + id);

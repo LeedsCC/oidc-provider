@@ -1,27 +1,33 @@
 {
   "oidc_provider": {
     "issuer": {
-      "host": "http://192.168.1.98",
-      "port": 8000
+      "host": "http://piserver-4",
+      "port": 8080
     },
     "path_prefix": "/openid",
-    "cookies": {
-      "long": {
-        "httpOnly": true,
-        "maxAge": 600000
+    "configuration_options": {
+      "cookies": {
+        "long": {
+          "httpOnly": true,
+          "maxAge": 1200000
+        }
+      },
+      "ttl": {
+        "IdToken": 1200
       }
     },
     "ui": {
       "login_form_title": "OpenId-Connect Authentication Service Log In",
-      "home_page_url": "http://192.168.1.98:8080/"
+      "home_page_url": "http://piserver-2:8080/demo"
     }
   },
   "orchestrator": {
-    "host": "http://192.168.1.98",
+    "host": "http://piserver-2",
     "port": 8080
   },
   "documentName": "OIDC",
   "use2FA": false,
+  "useEmail": false,
   "twilio": {
     "accountSid": "xxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "authToken": "yyyyyyyyyyyyyyyyyyyyyyyyyy",
