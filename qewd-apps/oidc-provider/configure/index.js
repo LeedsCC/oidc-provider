@@ -30,70 +30,75 @@
 
 var bcrypt = require('bcrypt');
 
+const logger = require('../../../logger').logger;
+
 module.exports = function(messageObj, session, send, finished) {
-
-  // Configure with initial data if present
-
-  var oidcDoc = this.db.use(this.oidc.documentName);
-  var data;
-
   try {
-    var data = require('/opt/qewd/mapped/configuration/data.json');
-  }
-  catch(err) {
-  }
+    // Configure with initial data if present
 
-  var id;
-  var now = new Date().toISOString();
-  var salt = bcrypt.genSaltSync(10);
-  var password;
+    var oidcDoc = this.db.use(this.oidc.documentName);
+    var data;
 
-  if (!oidcDoc.$('Access').exists && data) {
-    if (data.Access) {
-      var accessDoc = oidcDoc.$('Access');
-      data.Access.forEach(function(record) {
-        id = accessDoc.$('next_id').increment();
-        record.id = id;
-        password = record.password || 'password';
-        record.password = bcrypt.hashSync(password, salt);
-        record.verified = true;
-        record.createdBy = 1;
-        record.createdAt = now;
-        record.modifiedBy = 1;
-        record.modifiedAt = now;
-        accessDoc.$(['by_id', id]).setDocument(record);
-      });
+    try {
+      var data = require('/opt/qewd/mapped/configuration/data.json');
     }
-    if (data.Claims) {
-      var claimsDoc = oidcDoc.$('Claims');
-      data.Claims.forEach(function(record) {
-        id = claimsDoc.$('next_id').increment();
-        claimsDoc.$(['by_id', id]).setDocument(record);
-      });
+    catch(err) {
     }
-    if (data.Clients) {
-      var clientsDoc = oidcDoc.$('Clients');
-      data.Clients.forEach(function(record) {
-        id = clientsDoc.$('next_id').increment();
-        clientsDoc.$(['by_id', id]).setDocument(record);
-      });
+
+    var id;
+    var now = new Date().toISOString();
+    var salt = bcrypt.genSaltSync(10);
+    var password;
+
+    if (!oidcDoc.$('Access').exists && data) {
+      if (data.Access) {
+        var accessDoc = oidcDoc.$('Access');
+        data.Access.forEach(function(record) {
+          id = accessDoc.$('next_id').increment();
+          record.id = id;
+          password = record.password || 'password';
+          record.password = bcrypt.hashSync(password, salt);
+          record.verified = true;
+          record.createdBy = 1;
+          record.createdAt = now;
+          record.modifiedBy = 1;
+          record.modifiedAt = now;
+          accessDoc.$(['by_id', id]).setDocument(record);
+        });
+      }
+      if (data.Claims) {
+        var claimsDoc = oidcDoc.$('Claims');
+        data.Claims.forEach(function(record) {
+          id = claimsDoc.$('next_id').increment();
+          claimsDoc.$(['by_id', id]).setDocument(record);
+        });
+      }
+      if (data.Clients) {
+        var clientsDoc = oidcDoc.$('Clients');
+        data.Clients.forEach(function(record) {
+          id = clientsDoc.$('next_id').increment();
+          clientsDoc.$(['by_id', id]).setDocument(record);
+        });
+      }
+      if (data.Users) {
+        var usersDoc = oidcDoc.$('Users');
+        data.Users.forEach(function(record) {
+          id = usersDoc.$('next_id').increment();
+          password = record.password || 'password';
+          record.password = bcrypt.hashSync(password, salt);
+          record.verified = true;
+          record.hcp_id = 1;
+          record.createdBy = 1;
+          record.createdAt = now;
+          record.updatedBy = 1;
+          record.updatedAt = now;
+          usersDoc.$(['by_id', id]).setDocument(record);
+        });
+      }
     }
-    if (data.Users) {
-      var usersDoc = oidcDoc.$('Users');
-      data.Users.forEach(function(record) {
-        id = usersDoc.$('next_id').increment();
-        password = record.password || 'password';
-        record.password = bcrypt.hashSync(password, salt);
-        record.verified = true;
-        record.hcp_id = 1;
-        record.createdBy = 1;
-        record.createdAt = now;
-        record.updatedBy = 1;
-        record.updatedAt = now;
-        usersDoc.$(['by_id', id]).setDocument(record);
-      });
-    }
+
+    finished({ok: true});
+  } catch (error) {
+    logger.error('', error);
   }
-
-  finished({ok: true});
 };

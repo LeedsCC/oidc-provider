@@ -1,15 +1,11 @@
 /*
 
  ----------------------------------------------------------------------------
- | oidc-provider: OIDC Provider QEWD-Up MicroService                        |
  |                                                                          |
- | Copyright (c) 2019 M/Gateway Developments Ltd,                           |
- | Redhill, Surrey UK.                                                      |
- | All rights reserved.                                                     |
+ | http://www.synanetics.com                                                |
+ | Email: support@synanetics.com                                            |
  |                                                                          |
- | http://www.mgateway.com                                                  |
- | Email: rtweed@mgateway.com                                               |
- |                                                                          |
+ | Author: Richard Brown                                                    |
  |                                                                          |
  | Licensed under the Apache License, Version 2.0 (the "License");          |
  | you may not use this file except in compliance with the License.         |
@@ -24,17 +20,49 @@
  |  limitations under the License.                                          |
  ----------------------------------------------------------------------------
 
-  13 March 2019
+  17 Mar 2020
 
 */
 
-const logger = require('../../../logger').logger;
+'use strict';
 
-module.exports = function(messageObj, session, send, finished) {
-    try {
-        this.db.use(this.oidc.documentName, 'grants', messageObj.params.grant).delete();
-        finished({ok: true});
-    } catch (error) {
-        logger.error('', error);
-    }
-};
+const winston = require('winston');
+require('winston-daily-rotate-file');
+
+let logger = null;
+
+var errorTransport = new (winston.transports.DailyRotateFile)({
+    filename: 'logs/error-%DATE%.log',
+    datePattern: 'YYYY-MM-DD',
+    maxSize: '20m',
+    maxFiles: '2d',
+    createSymlink: true,
+    symlinkName: 'error.log'
+});
+
+function buildLogger(serviceName) {
+  if (logger) {
+    return;
+  }
+  
+  logger = winston.createLogger({
+    level: 'error',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+    defaultMeta: { service: serviceName },
+    transports: [
+        errorTransport
+    ]
+  });
+
+  // Call exceptions.handle with a transport to handle exceptions
+  logger.exceptions.handle(
+    errorTransport
+  );
+}
+
+buildLogger('oidc_provider');
+
+module.exports = { logger };

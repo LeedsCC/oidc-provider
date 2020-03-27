@@ -27,9 +27,14 @@
   12 March 2019
 
 */
+const logger = require('../../../logger').logger;
 
 module.exports = function(messageObj, session, send, finished) {
-  var grantDoc = this.db.use(this.oidc.documentName, 'grants', messageObj.params.grant);
-  grantDoc.$('scope').value = messageObj.params.scope;
-  finished({ok: true});
+    try {
+        var grantDoc = this.db.use(this.oidc.documentName, 'grants', messageObj.params.grant);
+        grantDoc.$('scope').value = messageObj.params.scope;
+        finished({ok: true});
+    } catch (error) {
+        logger.error('', error);
+    }
 };

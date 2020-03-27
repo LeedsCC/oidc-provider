@@ -30,6 +30,7 @@
 
 //var oidc_config = require('/opt/qewd/mapped/configuration/oidc.json');
 
+const logger = require('../../../logger').logger;
 
 function getAClient(clientsDoc, client_id) {
 
@@ -55,17 +56,21 @@ function getAClient(clientsDoc, client_id) {
 }
 
 module.exports = function(messageObj, session, send, finished) {
-  var client_id;
-  if (messageObj.params) client_id = messageObj.params.id;
-  if (!client_id || client_id === '') {
-    return finished({error: 'Missing or empty Client Id'});
-  }
-  var clientsDoc = this.db.use(this.oidc.documentName, 'Clients');
-  var clientIndex = clientsDoc.$(['by_client_id', client_id]);
-  if (clientIndex.exists) {
-    finished(getAClient.call(this, clientsDoc, client_id));
-  }
-  else {
-    finished({error: 'No such Client'});
+  try {
+    var client_id;
+    if (messageObj.params) client_id = messageObj.params.id;
+    if (!client_id || client_id === '') {
+      return finished({error: 'Missing or empty Client Id'});
+    }
+    var clientsDoc = this.db.use(this.oidc.documentName, 'Clients');
+    var clientIndex = clientsDoc.$(['by_client_id', client_id]);
+    if (clientIndex.exists) {
+      finished(getAClient.call(this, clientsDoc, client_id));
+    }
+    else {
+      finished({error: 'No such Client'});
+    }
+  } catch (error) {
+    logger.error('', error);
   }
 };

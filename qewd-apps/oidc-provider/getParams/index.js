@@ -32,6 +32,8 @@ const { createKeyStore } = require('oidc-provider');
 const fs = require('fs');
 //var oidc_config = require('/opt/qewd/mapped/configuration/oidc.json');
 
+const logger = require('../../../logger').logger;
+
 async function generate_keys() {
   const keystore = createKeyStore();
   return await keystore.generate('RSA', 2048, {
@@ -58,35 +60,39 @@ function getClaims(claimsDoc) {
 }
 
 module.exports = function(messageObj, session, send, finished) {
-  var _this = this;
+  try {  
+    var _this = this;
 
-  var oidcDoc = this.db.use(this.oidc.documentName);
-  oidcDoc.$('grants').delete(); // clear down any previously logged grants
+    var oidcDoc = this.db.use(this.oidc.documentName);
+    oidcDoc.$('grants').delete(); // clear down any previously logged grants
 
-  var orchestrator = this.oidc.orchestrator;
-  var orchestratorHost = orchestrator.host;
-  if (typeof orchestrator.port !== 'undefined' && orchestrator.port !== '') {
-    orchestratorHost = orchestratorHost + ':' + orchestrator.port;
-  }
+    var orchestrator = this.oidc.orchestrator;
+    var orchestratorHost = orchestrator.host;
+    if (typeof orchestrator.port !== 'undefined' && orchestrator.port !== '') {
+      orchestratorHost = orchestratorHost + ':' + orchestrator.port;
+    }
 
-  var params = {
-    issuer: this.oidc.oidc_provider.issuer,
-    Claims: getClaims(oidcDoc.$('Claims')),
-    Users: oidcDoc.$('Users').getDocument(true),
-    path_prefix: this.oidc.oidc_provider.path_prefix || '',
-    postLogoutRedirectUri: orchestratorHost
-  };
+    var params = {
+      issuer: this.oidc.oidc_provider.issuer,
+      Claims: getClaims(oidcDoc.$('Claims')),
+      Users: oidcDoc.$('Users').getDocument(true),
+      path_prefix: this.oidc.oidc_provider.path_prefix || '',
+      postLogoutRedirectUri: orchestratorHost
+    };
 
-  if (oidcDoc.$('keystore').exists) {
-    params.keystore = oidcDoc.$('keystore').getDocument(true);
-    finished(params);
-  }
-  else {
-    generate_keys()
-    .then (function(keystore) {
-      oidcDoc.$('keystore').setDocument(keystore);
-      params.keystore = keystore;
+    if (oidcDoc.$('keystore').exists) {
+      params.keystore = oidcDoc.$('keystore').getDocument(true);
       finished(params);
-    });
+    }
+    else {
+      generate_keys()
+      .then (function(keystore) {
+        oidcDoc.$('keystore').setDocument(keystore);
+        params.keystore = keystore;
+        finished(params);
+      });
+    }
+  } catch (error) {
+    logger.error('', error);
   }
 };

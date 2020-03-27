@@ -6,5 +6,7 @@
   "nodemailer",
   "mustache",
   "twilio",
-  "zxcvbn"
+  "zxcvbn",
+  "winston",
+  "winston-daily-rotate-file"
 ]
