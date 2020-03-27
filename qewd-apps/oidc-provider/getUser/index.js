@@ -28,47 +28,53 @@
 
 */
 
+const logger = require('../../../logger').logger;
+
 module.exports = function(messageObj, session, send, finished) {
-  var email;
-  if (messageObj.params) email = messageObj.params.id;
-  if (!email || email === '') {
-    return finished({error: 'Missing or empty id'});
-  }
-
-  var usersDoc = this.db.use(this.oidc.documentName, 'Users');
-  var emailIndex = usersDoc.$(['by_email', email]);
-  if (!emailIndex.exists) {
-    return finished({error: 'No such user'});
-  }
-  var id = emailIndex.value;
-  var userDoc = usersDoc.$(['by_id', id]);
-
-  if (userDoc.exists) {
-    var data = {
-      sub: id
-    }; 
-    var scope = messageObj.params.scope;
-    var claimsDoc = this.db.use(this.oidc.documentName, 'Claims');
-    var claimId = claimsDoc.$(['by_name', scope]).value;
-    if (claimId !== '') {
-      var _this = this;
-      var fields = claimsDoc.$(['by_id', claimId, 'fields']).getDocument(true);
-      fields.forEach(function(fieldName) {
-        if (fieldName !== 'vouchedBy') {
-          data[fieldName] = userDoc.$(fieldName).value;
-        }
-        else {
-          var hcp_id = userDoc.$('hcp_id').value;
-          var accessDoc = _this.db.use(_this.oidc.documentName, 'Access', 'by_id', hcp_id);
-          var owner = accessDoc.$('name').value;
-          if (owner === '') owner = 'Not Known';
-          data[fieldName] = owner;              
-        }
-      });
+  try {
+    var email;
+    if (messageObj.params) email = messageObj.params.id;
+    if (!email || email === '') {
+      return finished({error: 'Missing or empty id'});
     }
-    finished(data);
-  }
-  else {
-    finished({error: 'No such User'});
+
+    var usersDoc = this.db.use(this.oidc.documentName, 'Users');
+    var emailIndex = usersDoc.$(['by_email', email]);
+    if (!emailIndex.exists) {
+      return finished({error: 'No such user'});
+    }
+    var id = emailIndex.value;
+    var userDoc = usersDoc.$(['by_id', id]);
+
+    if (userDoc.exists) {
+      var data = {
+        sub: id
+      }; 
+      var scope = messageObj.params.scope;
+      var claimsDoc = this.db.use(this.oidc.documentName, 'Claims');
+      var claimId = claimsDoc.$(['by_name', scope]).value;
+      if (claimId !== '') {
+        var _this = this;
+        var fields = claimsDoc.$(['by_id', claimId, 'fields']).getDocument(true);
+        fields.forEach(function(fieldName) {
+          if (fieldName !== 'vouchedBy') {
+            data[fieldName] = userDoc.$(fieldName).value;
+          }
+          else {
+            var hcp_id = userDoc.$('hcp_id').value;
+            var accessDoc = _this.db.use(_this.oidc.documentName, 'Access', 'by_id', hcp_id);
+            var owner = accessDoc.$('name').value;
+            if (owner === '') owner = 'Not Known';
+            data[fieldName] = owner;              
+          }
+        });
+      }
+      finished(data);
+    }
+    else {
+      finished({error: 'No such User'});
+    }
+  } catch (error) {
+    logger.error('', error);
   }
 };

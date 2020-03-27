@@ -27,17 +27,22 @@
   12 March 2019
 
 */
+const logger = require('../../../logger').logger;
 
 module.exports = function(messageObj, session, send, finished) {
-  if (messageObj.params.password === this.userDefined.config.managementPassword) {
-    session.timeout = 20 * 60;
-    session.updateExpiry();
-    session.authenticated = true;
-    finished({
-      ok: true
-    });
-  }
-  else {
-    finished({ok: false});
+  try {
+    if (messageObj.params.password === this.userDefined.config.managementPassword) {
+      session.timeout = 20 * 60;
+      session.updateExpiry();
+      session.authenticated = true;
+      finished({
+        ok: true
+      });
+    }
+    else {
+      finished({ok: false});
+    }
+  } catch (error) {
+    logger.error('', error);
   }
 };

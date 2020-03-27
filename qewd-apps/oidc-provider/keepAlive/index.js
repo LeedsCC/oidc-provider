@@ -27,8 +27,14 @@
   12 March 2019
 
 */
+const logger = require('../../../logger').logger;
+
 
 module.exports = function(messageObj, session, send, finished) {
-  // simply keeps the QEWD session alive for this application
-  finished({keepalive: true});
+    try {
+        // simply keeps the QEWD session alive for this application
+        finished({keepalive: true});
+    } catch (error) {
+        logger.error('', error);
+    }
 };

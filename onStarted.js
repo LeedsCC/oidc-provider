@@ -30,8 +30,12 @@
 
 var startOidcProvider = require('./oidc-provider-interfaces/start');
 
-module.exports = function(config, app, qewdRouter) {
- 
-  startOidcProvider.call(this, app, this.bodyParser);
+const logger = require('./logger').logger;
 
+module.exports = function(config, app, qewdRouter) {
+  try {
+    startOidcProvider.call(this, app, this.bodyParser);
+  } catch (error) {
+      logger.error('', error);
+  }
 };
