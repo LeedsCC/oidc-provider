@@ -27,6 +27,7 @@
   18 March 2019
 
 */
+const logger = require('../../../logger').logger;
 
 var bcrypt = require('bcrypt');
 var nodemailer = require('nodemailer');
@@ -48,87 +49,89 @@ function getTextFromFile(fileName) {
 var transporter;
 
 module.exports = function(messageObj, session, send, finished) {
+  try {
+    var email = messageObj.params.email;
 
-  var email = messageObj.params.email;
+    var usersDoc = this.db.use(this.oidc.documentName, 'Users');
+    var emailIndex = usersDoc.$(['by_email', email]);
 
-  var usersDoc = this.db.use(this.oidc.documentName, 'Users');
-  var emailIndex = usersDoc.$(['by_email', email]);
+    if (!emailIndex.exists) {
+      if (this.oidc.useEmail === false) {
+        return finished({
+          ok: false,
+          temporary_password: ''
+        });
+      }
+      return finished({error: 'Unrecognised email address'});
+    }
 
-  if (!emailIndex.exists) {
+    var id = emailIndex.value;
+    var userDoc = usersDoc.$(['by_id', id]);
+    if (!userDoc.exists) {
+      return finished({error: 'A problem occurred when accessing your account.  Please contact your Administrator'});
+    }
+
+    var password = randomstring.generate({
+      length: 6,
+      charset: 'numeric'
+    });
+    var salt = bcrypt.genSaltSync(10);
+    var hash = bcrypt.hashSync(password, salt);
+
+    userDoc.$('verified').value = 'pending_first_login';
+    userDoc.$('password').value = hash;
+    userDoc.$('updatedAt').value = new Date().toISOString();
+    userDoc.$('modifiedBy').value = id;
+
     if (this.oidc.useEmail === false) {
       return finished({
-        ok: false,
-        temporary_password: ''
+        ok: true,
+        temporary_password: password
       });
     }
-    return finished({error: 'Unrecognised email address'});
-  }
 
-  var id = emailIndex.value;
-  var userDoc = usersDoc.$(['by_id', id]);
-  if (!userDoc.exists) {
-    return finished({error: 'A problem occurred when accessing your account.  Please contact your Administrator'});
-  }
-
-  var password = randomstring.generate({
-    length: 6,
-    charset: 'numeric'
-  });
-  var salt = bcrypt.genSaltSync(10);
-  var hash = bcrypt.hashSync(password, salt);
-
-  userDoc.$('verified').value = 'pending_first_login';
-  userDoc.$('password').value = hash;
-  userDoc.$('updatedAt').value = new Date().toISOString();
-  userDoc.$('modifiedBy').value = id;
-
-  if (this.oidc.useEmail === false) {
-    return finished({
-      ok: true,
-      temporary_password: password
-    });
-  }
-
-  var nodemailer_params = this.oidc.email_server;
-  if (!transporter) {
-    transporter = nodemailer.createTransport(nodemailer_params);
-  }
-  var oidc_server = this.oidc.oidc_provider.issuer.host;
-  var port = this.oidc.oidc_provider.issuer.port;
-  if (!oidc_server.startsWith('https://')) {
-    if (port && port !== 80) {
-      oidc_server = oidc_server + ':' + port;
+    var nodemailer_params = this.oidc.email_server;
+    if (!transporter) {
+      transporter = nodemailer.createTransport(nodemailer_params);
     }
-  }
-  var email_options = this.oidc.user_verify_email;
-
-  var text = getTextFromFile(__dirname + '/requestNewPasswordEmail.txt');
-
-  var subst = {
-    password: password,
-    applicationName: email_options.application_name,
-    contactEmail: email_options.contact_email
-  };
-
-  var html = mustache.render(text, subst);
-
-  var mailOptions = {
-    from: email_options.from,
-    to: email,
-    subject: email_options.subject,
-    html: html
-  };
-
-  transporter.sendMail(mailOptions, function(error, info) {
-    if (error) {
-      console.log('** emailing error: ' + error);
-      return finished({error: error});
+    var oidc_server = this.oidc.oidc_provider.issuer.host;
+    var port = this.oidc.oidc_provider.issuer.port;
+    if (!oidc_server.startsWith('https://')) {
+      if (port && port !== 80) {
+        oidc_server = oidc_server + ':' + port;
+      }
     }
-    console.log('** email info: ' + JSON.stringify(info, null, 2));
-    finished({
-      ok: true,
-      info: info
-    });
-  });
+    var email_options = this.oidc.user_verify_email;
 
+    var text = getTextFromFile(__dirname + '/requestNewPasswordEmail.txt');
+
+    var subst = {
+      password: password,
+      applicationName: email_options.application_name,
+      contactEmail: email_options.contact_email
+    };
+
+    var html = mustache.render(text, subst);
+
+    var mailOptions = {
+      from: email_options.from,
+      to: email,
+      subject: email_options.subject,
+      html: html
+    };
+
+    transporter.sendMail(mailOptions, function(error, info) {
+      if (error) {
+        console.log('** emailing error: ' + error);
+        return finished({error: error});
+      }
+      console.log('** email info: ' + JSON.stringify(info, null, 2));
+      finished({
+        ok: true,
+        info: info
+      });
+    });
+  } catch (error) {
+    logger.error('', error);
+  }
 };

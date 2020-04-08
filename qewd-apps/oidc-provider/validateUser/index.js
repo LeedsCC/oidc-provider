@@ -34,116 +34,121 @@ var send2FACode = require('./send2FACode');
 
 var failTimeout = 15 * 60 * 1000;  // 15 minute lockout
 
+const logger = require('../../../logger').logger;
+
 module.exports = function(messageObj, session, send, finished) {
+  try {
+    var use2FA = (this.oidc.use2FA !== false);
 
-  var use2FA = (this.oidc.use2FA !== false);
+    if (!messageObj.params) return finished({error: 'Invalid login attempt'});
+    var email = messageObj.params.email;
+    if (!email || email === '') return finished({error: 'Invalid login attempt'});
+    var password = messageObj.params.password;
+    if (!password || password === '') return finished({error: 'Invalid login attempt'});
 
-  if (!messageObj.params) return finished({error: 'Invalid login attempt'});
-  var email = messageObj.params.email;
-  if (!email || email === '') return finished({error: 'Invalid login attempt'});
-  var password = messageObj.params.password;
-  if (!password || password === '') return finished({error: 'Invalid login attempt'});
-
-  var grant = messageObj.params.grant;
-  if (!grant || grant === '') {
-    return finished({error: 'Invalid login attempt'});
-  }
-
-  var sessionGrantDoc = session.data.$(['grantLock', grant]);
-  if (sessionGrantDoc.exists) {
-    // the no of attempts against a specific grant doesn't time out
-
-    if (sessionGrantDoc.$('lockedOut').exists) {
-      return finished({error: 'Maximum Number of Attempts Exceeded'});
+    var grant = messageObj.params.grant;
+    if (!grant || grant === '') {
+      return finished({error: 'Invalid login attempt'});
     }
-  }
-  // make sure they're not just trying a change of grant to bypass the above lock
-  var sessionUsernameDoc = session.data.$(['usernameLock', email]);
-  if (sessionUsernameDoc.exists) {
-    if (sessionUsernameDoc.$('lockedOut').exists) {
-      // a username-specific lockout expires after 15 minutes
 
-      if (sessionUsernameDoc.$('expiry').value < Date.now()) {
-        sessionUsernameDoc.delete();
-      }
-      else {
+    var sessionGrantDoc = session.data.$(['grantLock', grant]);
+    if (sessionGrantDoc.exists) {
+      // the no of attempts against a specific grant doesn't time out
+
+      if (sessionGrantDoc.$('lockedOut').exists) {
         return finished({error: 'Maximum Number of Attempts Exceeded'});
       }
     }
-  }
+    // make sure they're not just trying a change of grant to bypass the above lock
+    var sessionUsernameDoc = session.data.$(['usernameLock', email]);
+    if (sessionUsernameDoc.exists) {
+      if (sessionUsernameDoc.$('lockedOut').exists) {
+        // a username-specific lockout expires after 15 minutes
 
-  var noOfAttemptsByUsername;
-  var noOfAttemptsByGrant;
-
-  var usersDoc = this.db.use(this.oidc.documentName, 'Users');
-  var emailIndex = usersDoc.$(['by_email', email]);
-  if (!emailIndex.exists) {
-    noOfAttemptsByGrant = sessionGrantDoc.$('noOfAttempts').increment();
-    noOfAttemptsByUsername = sessionUsernameDoc.$('noOfAttempts').increment();
-    if (noOfAttemptsByGrant > 5 || noOfAttemptsByUsername > 5) {
-      sessionGrantDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
-      sessionGrantDoc.$('lockedOut').value = true;
-      sessionUsernameDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
-      sessionUsernameDoc.$('lockedOut').value = true;
-      return finished({error: 'Maximum Number of Attempts Exceeded'});
+        if (sessionUsernameDoc.$('expiry').value < Date.now()) {
+          sessionUsernameDoc.delete();
+        }
+        else {
+          return finished({error: 'Maximum Number of Attempts Exceeded'});
+        }
+      }
     }
-    return finished({error: 'Invalid login attempt'});
-  }
 
-  var id = emailIndex.value;
-  var userDoc = usersDoc.$(['by_id', id]);
-  if (!userDoc.exists) {
-    return finished({error: 'Unexpected problem occurred'});
-  }
+    var noOfAttemptsByUsername;
+    var noOfAttemptsByGrant;
 
-  var hashedPassword = userDoc.$('password').value;
-  var match = bcrypt.compareSync(password, hashedPassword);
-  if (!match) {
-    noOfAttemptsByGrant = sessionGrantDoc.$('noOfAttempts').increment();
-    noOfAttemptsByUsername = sessionUsernameDoc.$('noOfAttempts').increment();
-    if (noOfAttemptsByGrant > 5 || noOfAttemptsByUsername > 5) {
-      sessionGrantDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
-      sessionGrantDoc.$('lockedOut').value = true;
-      sessionUsernameDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
-      sessionUsernameDoc.$('lockedOut').value = true;
-      return finished({error: 'Maximum Number of Attempts Exceeded'});
+    var usersDoc = this.db.use(this.oidc.documentName, 'Users');
+    var emailIndex = usersDoc.$(['by_email', email]);
+    if (!emailIndex.exists) {
+      noOfAttemptsByGrant = sessionGrantDoc.$('noOfAttempts').increment();
+      noOfAttemptsByUsername = sessionUsernameDoc.$('noOfAttempts').increment();
+      if (noOfAttemptsByGrant > 5 || noOfAttemptsByUsername > 5) {
+        sessionGrantDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
+        sessionGrantDoc.$('lockedOut').value = true;
+        sessionUsernameDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
+        sessionUsernameDoc.$('lockedOut').value = true;
+        return finished({error: 'Maximum Number of Attempts Exceeded'});
+      }
+      return finished({error: 'Invalid login attempt'});
     }
-    return finished({error: 'Invalid login attempt'});
-  }
 
-  sessionUsernameDoc.delete();
-  sessionGrantDoc.delete();
-
-  if (!use2FA) {
-    var resetPassword = false;
-    if (userDoc.$('verified').value === 'pending_first_login') {
-      resetPassword = true;
-      session.data.$(['resetPassword', grant]).value = id;
+    var id = emailIndex.value;
+    var userDoc = usersDoc.$(['by_id', id]);
+    if (!userDoc.exists) {
+      return finished({error: 'Unexpected problem occurred'});
     }
-    return finished({
-      ok: true,
+
+    var hashedPassword = userDoc.$('password').value;
+    var match = bcrypt.compareSync(password, hashedPassword);
+    if (!match) {
+      noOfAttemptsByGrant = sessionGrantDoc.$('noOfAttempts').increment();
+      noOfAttemptsByUsername = sessionUsernameDoc.$('noOfAttempts').increment();
+      if (noOfAttemptsByGrant > 5 || noOfAttemptsByUsername > 5) {
+        sessionGrantDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
+        sessionGrantDoc.$('lockedOut').value = true;
+        sessionUsernameDoc.$('expiry').value = Date.now() + failTimeout;  // extend 5 minute expiry 
+        sessionUsernameDoc.$('lockedOut').value = true;
+        return finished({error: 'Maximum Number of Attempts Exceeded'});
+      }
+      return finished({error: 'Invalid login attempt'});
+    }
+
+    sessionUsernameDoc.delete();
+    sessionGrantDoc.delete();
+
+    if (!use2FA) {
+      var resetPassword = false;
+      if (userDoc.$('verified').value === 'pending_first_login') {
+        resetPassword = true;
+        session.data.$(['resetPassword', grant]).value = id;
+      }
+      return finished({
+        ok: true,
+        accountId: email,
+        resetPassword: resetPassword
+      });
+    }
+
+    console.log('sending 2FA code for ' + id);
+
+    var verified = userDoc.$('verified').value;
+    var resetPassword = (verified === 'pending_first_login');
+
+    var params = {
+      id: id,
+      grant: messageObj.params.grant,
       accountId: email,
-      resetPassword: resetPassword
+      resetPassword: resetPassword,
+      session: session
+    };
+
+    send2FACode.call(this, params, function(response) {
+      console.log('send2FAcode response: ' + JSON.stringify(response, null, 2));
+      finished({
+        ok: true
+      });
     });
+  } catch (error) {
+    logger.error('', error);
   }
-
-  console.log('sending 2FA code for ' + id);
-
-  var verified = userDoc.$('verified').value;
-  var resetPassword = (verified === 'pending_first_login');
-
-  var params = {
-    id: id,
-    grant: messageObj.params.grant,
-    accountId: email,
-    resetPassword: resetPassword,
-    session: session
-  };
-
-  send2FACode.call(this, params, function(response) {
-    console.log('send2FAcode response: ' + JSON.stringify(response, null, 2));
-    finished({
-      ok: true
-    });
-  });
 };
